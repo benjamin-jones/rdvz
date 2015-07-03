@@ -1,0 +1,7 @@
+[package]
+name = "rdvz-rust"
+version = "0.1.0"
+authors = ["Benjamin Jones <ben@benjaminjones.me>"]
+
+[dependencies]
+rand = "*"
