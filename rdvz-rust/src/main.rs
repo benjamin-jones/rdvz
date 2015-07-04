@@ -5,7 +5,6 @@ use std::io::Write;
 use std::io::Read;
 use std::io::stdout;
 use std::path::Path;
-use std::fs::PathExt;
 use std::process::Command;
 use std::error::Error;
 use std::fs::File;
@@ -30,6 +29,21 @@ fn raw_input(prompt: &str) -> String {
 
 fn id_generator() -> String {
     return rand::thread_rng().gen_ascii_chars().take(16).collect::<String>();
+}
+
+fn path_exists(path: &Path) -> bool {
+
+    println!("Entering path_exists()...");
+    match File::open(path) {
+        Err(_) => {
+            println!("Didn't open file");
+            return false;
+        },
+        Ok(_) => {
+            println!("Opened file");
+            return true;
+        },
+    };
 }
 
 fn main() {
@@ -58,15 +72,30 @@ fn main() {
 
     let path = Path::new(&fifo[..]);
 
-    if path.exists() {
+    if path_exists(path) {
         // We're not first
+
+        println!("Not first");
+
+        let mut file = match File::create(&path) {
+            Err(why) => panic!("couldn't open {}: {}", path.display(), Error::description(&why)),
+            Ok(file)    => file,
+        };
+
+        match file.write_all("1".as_bytes()) {
+            Err(why) =>  {
+                panic!("couldn't write to {}: {}", path.display(), Error::description(&why))
+            },
+            Ok(_) => println!("Sent message"),
+        }
+        
     } else {
         // We're first!
 
+        println!("First");
+
         // Make FIFO
-        let output = Command::new("mkfifo")
-            .arg(path.as_os_str())
-            .output().unwrap_or_else(|e| {
+        Command::new("mkfifo").arg(path.as_os_str()).output().unwrap_or_else(|e| {
                 panic!("failed to execute process: {}", e)
             });
         
@@ -82,9 +111,7 @@ fn main() {
         };
     }
 
-    let output = Command::new("rm")
-        .arg(format!("-f {}", path.to_str().unwrap()))
-        .output().unwrap_or_else(|e| {
+    Command::new("rm").arg(path.as_os_str()).output().unwrap_or_else(|e| {
             panic!("failed to execute process: {}", e)
         });
 }
